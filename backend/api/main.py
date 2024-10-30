@@ -1,7 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
 import hashlib
@@ -25,26 +25,64 @@ def format_date(date_str: str) -> str:
         return date_str
 
 @app.get("/articles")
-def read_articles(tag: str = None, start_date: str = None, end_date: str = None, page: int = 1, size: int = 10):
+def read_articles(
+    tag: Optional[str] = None,
+    search: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=10, ge=1, le=100),
+    sort: str = Query(default="date", regex="^(date|relevance)$")
+):
     try:
         # Build query
-        query = {"match_all": {}}
+        must_conditions = []
+
+        # Add tag filter if provided
         if tag:
-            query = {"term": {"tags.keyword": tag}}
-        if start_date and end_date:
-            query = {
-                "bool": {
-                    "must": [
-                        {"range": {"date": {"gte": start_date, "lte": end_date}}}
-                    ]
+            must_conditions.append({"term": {"tags.keyword": tag}})
+
+        # Add search if provided
+        if search:
+            must_conditions.append({
+                "multi_match": {
+                    "query": search,
+                    "fields": ["title^2", "content", "tags"],
+                    "type": "best_fields",
+                    "fuzziness": "AUTO"
                 }
+            })
+
+        # Add date range if provided
+        if start_date and end_date:
+            must_conditions.append({
+                "range": {
+                    "date": {
+                        "gte": start_date,
+                        "lte": end_date
+                    }
+                }
+            })
+
+        # Build final query
+        query = {
+            "bool": {
+                "must": must_conditions
             }
+        } if must_conditions else {"match_all": {}}
+
+        # Add sorting
+        sort_config = [{"date": {"order": "desc"}}]
+        if sort == "relevance" and search:
+            sort_config = ["_score", {"date": {"order": "desc"}}]
 
         # Execute search
         res = es.search(index="cybernews", body={
             "query": query,
             "from": (page - 1) * size,
-            "size": size
+            "size": size,
+            "sort": sort_config,
+            "track_total_hits": True
         })
 
         # Transform results to match frontend expectations
@@ -66,31 +104,48 @@ def read_articles(tag: str = None, start_date: str = None, end_date: str = None,
             # Split tags if they contain "/"
             tag_list = [t.strip() for t in tags.split("/")] if isinstance(tags, str) else [tags] if tags else []
             
+            # Handle image URL
+            image_url = source.get("image_url", ["/placeholder.svg?height=100&width=200"])[0]
+            if isinstance(image_url, list) and image_url:
+                image_url = image_url[0]
+            if image_url and image_url.startswith('data:image/svg+xml;base64,'):
+                image_url = "/placeholder.svg?height=100&width=200"
+            
             article = {
                 "id": numeric_id,
                 "title": title,
                 "description": content[:200] + "..." if content else "",
                 "date": format_date(date),
                 "sources": ["The Hacker News"],  # All articles are from THN
-                "image": source.get("image_url", ["/placeholder.svg?height=100&width=200"])[0],
+                "image": image_url,
                 "category": "general",  # Default category
                 "tags": tag_list,
                 "rating": 4.5,  # Default rating
-                "comments": []  # No comments initially
+                "comments": [],  # No comments initially
+                "url": url  # Original article URL
             }
             
             # Determine category based on tags
-            if any("financ" in tag.lower() for tag in tag_list):
+            if any("financ" in t.lower() for t in tag_list):
                 article["category"] = "finance"
-            elif any(tag.lower() in ["tech", "vulnerability", "security"] for tag in tag_list):
+            elif any(t.lower() in ["tech", "vulnerability", "security", "ai"] for t in tag_list):
                 article["category"] = "technical"
 
             articles.append(article)
 
         return {
             "articles": articles,
-            "total": res["hits"]["total"]["value"]
+            "total": res["hits"]["total"]["value"],
+            "page": page,
+            "size": size,
+            "pages": (res["hits"]["total"]["value"] + size - 1) // size
         }
     except Exception as e:
         print(f"Error processing articles: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Failed to fetch articles",
+                "error": str(e)
+            }
+        )

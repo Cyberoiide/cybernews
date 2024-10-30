@@ -43,24 +43,47 @@ type ChatMessage = {
   content: string
 }
 
-const fetchArticles = async (category = 'all', searchTerm = '', page = 1) => {
+const fetchArticles = async (category = 'all', searchTerm = '', page = 1, sort = 'date') => {
   try {
-    const response = await fetch(
-      `http://localhost:8010/articles?page=${page}&size=10${category !== 'all' ? `&tag=${category}` : ''}`
-    );
-    if (!response.ok) {
-      throw new Error('Network response was not ok');
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: '10',
+      sort: ['date', 'relevance'].includes(sort) ? sort : 'date' // Ensure valid sort value
+    });
+
+    if (category !== 'all') {
+      params.append('tag', category);
     }
+
+    if (searchTerm) {
+      params.append('search', searchTerm);
+    }
+
+    console.log(`Request params: ${params.toString()}`);
+
+    const response = await fetch(`http://localhost:8010/articles?${params}`);
+
+    if (!response.ok) {
+      console.error(`HTTP Status: ${response.status} - ${response.statusText}`);
+      throw new Error(`Network response was not ok: ${response.statusText}`);
+    }
+
     const data = await response.json();
-    return data.articles.map((article: any) => ({
-      ...article,
-      image: article.image || '/placeholder.svg?height=100&width=200'
-    }));
+    return {
+      articles: data.articles.map((article: any) => ({
+        ...article,
+        image: article.image || '/placeholder.svg?height=100&width=200'
+      })),
+      total: data.total,
+      pages: data.pages
+    };
   } catch (error) {
     console.error("Failed to fetch articles:", error);
-    return [];
+    return { articles: [], total: 0, pages: 0 };
   }
 };
+
+
 
 const categories = [
   { id: 'all', name: 'All' },
@@ -86,6 +109,7 @@ export default function CyberNewsDashboard() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [currentMessage, setCurrentMessage] = useState('')
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [totalPages, setTotalPages] = useState(1);
   const [newArticle, setNewArticle] = useState<Omit<Article, 'id' | 'sources' | 'rating' | 'comments'>>({
     title: '',
     description: '',
@@ -121,13 +145,12 @@ export default function CyberNewsDashboard() {
     }
   }, [newsArticles, searchTerm, sortBy, selectedCategories])
 
-  const currentArticles = useMemo(() => {
-    const indexOfLastItem = currentPage * itemsPerPage
-    const indexOfFirstItem = indexOfLastItem - itemsPerPage
-    return filteredAndSortedArticles.slice(indexOfFirstItem, indexOfLastItem)
-  }, [filteredAndSortedArticles, currentPage, itemsPerPage])
+  // Remove client-side filtering and sorting since it's now handled by the API
+  const currentArticles = newsArticles;
 
-  const pageCount = Math.ceil(filteredAndSortedArticles.length / itemsPerPage)
+  // Update pagination to use API's total pages
+  const pageCount = totalPages;
+
 
   const handleSaveArticle = (article: Article) => {
     setSavedArticles(prev => {
@@ -233,16 +256,19 @@ export default function CyberNewsDashboard() {
     setNotifications(prev => [...prev, `Language changed to ${lang.toUpperCase()}`])
   }
 
-  // Update the useEffect to fetch articles
+  // Update useEffect to handle pagination
   useEffect(() => {
     const loadArticles = async () => {
       const selectedCategory = selectedCategories.includes('all') ? '' : selectedCategories[0];
-      const articles = await fetchArticles(selectedCategory, searchTerm, currentPage);
-      setNewsArticles(articles);
+      const sortParam = sortBy === 'new' ? 'date' : sortBy === 'hot' ? 'sources' : 'rating';
+      const result = await fetchArticles(selectedCategory, searchTerm, currentPage, sortParam);
+      setNewsArticles(result.articles);
+      setTotalPages(result.pages);
     };
 
     loadArticles();
-  }, [selectedCategories, searchTerm, currentPage]);
+  }, [selectedCategories, searchTerm, currentPage, sortBy]);
+
 
 
   return (
@@ -427,13 +453,17 @@ export default function CyberNewsDashboard() {
             <Card key={article.id} className="overflow-hidden border-gray-200">
               <div className="flex">
                 <div className="flex-shrink-0 w-48">
-                  <Image
-                    src={article.image}
-                    alt={article.title}
-                    width={200}
-                    height={100}
-                    className="h-full w-full object-cover"
-                  />
+                  {article.image && (article.image.startsWith('http://') || article.image.startsWith('https://') || article.image.startsWith('/')) ? (
+                    <Image
+                      src={article.image}
+                      alt={article.title}
+                      width={200}
+                      height={100}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div style={{ width: '100%', height: '100px', backgroundColor: '#f0f0f0' }}></div> // Placeholder
+                  )}
                 </div>
                 <CardContent className="flex-1 p-4">
                   <div className="flex items-center justify-between mb-2">
