@@ -11,15 +11,15 @@ class TheHackerNewsSpider(scrapy.Spider):
     def __init__(self, *args, **kwargs):
         super(TheHackerNewsSpider, self).__init__(*args, **kwargs)
         
-        # Attendre que Elasticsearch soit prêt
+        # Wait for Elasticsearch to be ready
         while True:
             try:
                 self.es = Elasticsearch(['http://elasticsearch:9200'])
                 self.es.ping()
-                break  # Si ça fonctionne, sortir de la boucle
+                break
             except Exception:
-                print("Attente de la connexion à Elasticsearch...")
-                time.sleep(5)  # Attendre 5 secondes avant de réessayer
+                print("Waiting for Elasticsearch connection...")
+                time.sleep(5)
 
     def parse(self, response):
         articles = response.css('div.body-post.clear')
@@ -32,10 +32,10 @@ class TheHackerNewsSpider(scrapy.Spider):
             tags = article.css('span.h-tags::text').getall()
             image_url = article.css('div.home-img img::attr(src)').get()
 
-            # Conversion de la date
+            # Convert date
             date = datetime.strptime(date_text, '%b %d, %Y').isoformat()
 
-            # Créer le document partiel
+            # Create partial document
             doc = {
                 "title": title,
                 "content": description,
@@ -48,21 +48,34 @@ class TheHackerNewsSpider(scrapy.Spider):
                 "image_url": image_url
             }
 
-            # Passer au parsing du contenu complet de l'article
+            # Proceed to parse full article content
             if url and url.startswith("http"):
                 yield response.follow(url, self.parse_article, meta={'doc': doc})
 
     def parse_article(self, response):
         doc = response.meta['doc']
         
-        # Extraction du contenu complet de l'article
+        # Extract full article content
         content_paragraphs = response.css('div.articlebody.clear.cf p::text').getall()
-        doc["content"] = " ".join(content_paragraphs)  # Concaténer les paragraphes
+        doc["content"] = " ".join(content_paragraphs)
         
-        # Envoi du document à Elasticsearch
-        try:
-            self.es.index(index="cybernews", document=doc)
-        except Exception as e:
-            self.logger.error(f"Erreur lors de l'indexation de l'article: {e}")
+        # Check if the article already exists in Elasticsearch
+        existing_doc = self.es.search(index="cybernews", body={
+            "query": {
+                "term": {
+                    "url.keyword": doc["url"]
+                }
+            }
+        })
+
+        # If the article doesn't exist, index it
+        if existing_doc['hits']['total']['value'] == 0:
+            try:
+                self.es.index(index="cybernews", document=doc, id=doc["url"])
+                self.logger.info(f"Indexed article: {doc['title']}")
+            except Exception as e:
+                self.logger.error(f"Error indexing article: {e}")
+        else:
+            self.logger.info(f"Article already exists: {doc['title']}")
         
         yield doc

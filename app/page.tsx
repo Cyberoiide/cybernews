@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { useRouter } from 'next/navigation'
+
 
 type Article = {
   id: number
@@ -83,8 +85,6 @@ const fetchArticles = async (category = 'all', searchTerm = '', page = 1, sort =
   }
 };
 
-
-
 const categories = [
   { id: 'all', name: 'All' },
   { id: 'general', name: 'General' },
@@ -101,6 +101,7 @@ const aiResponses = [
 ]
 
 export default function CyberNewsDashboard() {
+  const router = useRouter();
   const [newsArticles, setNewsArticles] = useState<Article[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [savedArticles, setSavedArticles] = useState<Article[]>([])
@@ -519,6 +520,7 @@ export default function CyberNewsDashboard() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => router.push(`/articles/${article.id}`)}
                   aria-label={`Read more about: ${article.title}`}
                 >
                   <ExternalLink className="mr-2 h-4 w-4" />

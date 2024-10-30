@@ -112,17 +112,17 @@ def read_articles(
                 image_url = "/placeholder.svg?height=100&width=200"
             
             article = {
-                "id": numeric_id,
+                "id": hit["_id"],  # Use the original _id directly
                 "title": title,
                 "description": content[:200] + "..." if content else "",
                 "date": format_date(date),
-                "sources": ["The Hacker News"],  # All articles are from THN
+                "sources": ["The Hacker News"],
                 "image": image_url,
-                "category": "general",  # Default category
+                "category": "general",
                 "tags": tag_list,
-                "rating": 4.5,  # Default rating
-                "comments": [],  # No comments initially
-                "url": url  # Original article URL
+                "rating": 4.5,
+                "comments": [],
+                "url": url
             }
             
             # Determine category based on tags
@@ -149,3 +149,18 @@ def read_articles(
                 "error": str(e)
             }
         )
+
+@app.get("/articles/{article_id}")
+def read_article(article_id: str):
+    try:
+        # Fetch the article directly by its `_id`
+        res = es.get(index="cybernews", id=article_id)
+        
+        # Access the document source if the article is found
+        source = res["_source"]
+        
+        # Return the full article content
+        return {"article": source}
+    except Exception as e:
+        # Handle cases where the article is not found or other exceptions
+        raise HTTPException(status_code=404, detail="Article not found" if "NotFoundError" in str(e) else str(e))
