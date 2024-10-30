@@ -1,0 +1,53 @@
+version: '3.7'
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=true
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - v2_cybernews_network  # Ajout au réseau
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.6.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - v2_cybernews_network  # Ajout au réseau
+
+  api:
+    build: ./backend/api  # Répertoire où se trouve le Dockerfile de l'API
+    container_name: cybernews_api
+    ports:
+      - "8010:8000"  # Exposer le port 8000 pour l'API
+    depends_on:
+      - elasticsearch
+    networks:
+      - v2_cybernews_network  # Ajout au réseau
+
+  crawler:
+    build: ./backend/crawler
+    depends_on:
+      - elasticsearch
+    restart: on-failure
+    networks:
+      - v2_cybernews_network  # Ajout au réseau
+
+volumes:
+  esdata:
+    driver: local
+
+networks:
+  v2_cybernews_network:  # Définition du réseau
+    driver: bridge

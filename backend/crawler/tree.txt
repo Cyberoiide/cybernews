@@ -1,0 +1,15 @@
+.
+├── crawler
+│   ├── __init__.py
+│   ├── items.py
+│   ├── middlewares.py
+│   ├── pipelines.py
+│   └── settings.py
+├── Dockerfile
+├── requirements.txt
+├── scrapy.cfg
+├── spiders
+│   └── thehackernews_spider.py
+└── tree.txt
+
+3 directories, 10 files
