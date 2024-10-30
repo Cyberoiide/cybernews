@@ -43,130 +43,24 @@ type ChatMessage = {
   content: string
 }
 
-const initialNewsArticles: Article[] = [
-  { 
-    id: 1, 
-    title: "New Ransomware Strain Targets Healthcare Sector", 
-    description: "A sophisticated ransomware attack is spreading rapidly through healthcare institutions, encrypting critical patient data and demanding substantial ransoms. Cybersecurity experts warn of potential life-threatening consequences if systems remain locked.", 
-    date: "2024-10-28",
-    sources: ["CyberSecurityNews", "HealthTechGuardian", "MedicalCyberWatch"],
-    image: "/placeholder.svg?height=100&width=200",
-    category: "general",
-    tags: ["ransomware", "healthcare", "cybersecurity"],
-    rating: 4.5,
-    comments: [
-      { id: 1, user: "CyberExpert", content: "This is a critical issue that needs immediate attention.", date: "2024-10-28" }
-    ]
-  },
-  { 
-    id: 2, 
-    title: "Critical Vulnerability Found in Popular IoT Devices", 
-    description: "Security researchers have uncovered a severe vulnerability affecting millions of IoT devices, potentially allowing hackers to gain unauthorized access to home networks and personal data.", 
-    date: "2024-10-27",
-    sources: ["TechSecurityWatch", "IoTGuardian"],
-    image: "/placeholder.svg?height=100&width=200",
-    category: "technical",
-    tags: ["IoT", "vulnerability", "cybersecurity"],
-    rating: 4.2,
-    comments: []
-  },
-  { 
-    id: 3, 
-    title: "AI-Powered Phishing Attacks on the Rise", 
-    description: "Cybercriminals are increasingly using AI to create more convincing phishing emails, making it harder for traditional spam filters to detect. Experts advise heightened vigilance and advanced email security measures.", 
-    date: "2024-10-26",
-    sources: ["AISecurityInsights", "PhishingAlertNetwork"],
-    image: "/placeholder.svg?height=100&width=200",
-    category: "general",
-    tags: ["AI", "phishing", "email security"],
-    rating: 4.7,
-    comments: []
-  },
-  { 
-    id: 4, 
-    title: "Major Cryptocurrency Exchange Hacked", 
-    description: "A leading cryptocurrency exchange has reported a significant security breach, resulting in the theft of millions of dollars worth of digital assets. The incident has sent shockwaves through the crypto market.", 
-    date: "2024-10-25",
-    sources: ["CryptoNewsDaily", "BlockchainGuardian"],
-    image: "/placeholder.svg?height=100&width=200",
-    category: "finance",
-    tags: ["cryptocurrency", "hack", "financial security"],
-    rating: 4.8,
-    comments: []
-  },
-  { 
-    id: 5, 
-    title: "New EU Cybersecurity Regulations Proposed", 
-    description: "The European Union has proposed new, stringent cybersecurity regulations aimed at protecting critical infrastructure and enhancing data privacy. Tech companies express concerns over implementation challenges.", 
-    date: "2024-10-24",
-    sources: ["EUPolicyWatch", "CyberLawInsider"],
-    image: "/placeholder.svg?height=100&width=200",
-    category: "general",
-    tags: ["EU", "regulations", "data privacy"],
-    rating: 4.0,
-    comments: []
-  },
-  { 
-    id: 6, 
-    title: "Quantum Encryption Breakthrough Announced", 
-    description: "Scientists have announced a major breakthrough in quantum encryption technology, potentially revolutionizing secure communications. Experts suggest this could render current encryption methods obsolete.", 
-    date: "2024-10-23",
-    sources: ["QuantumTechReview", "CryptoFuturist"],
-    image: "/placeholder.svg?height=100&width=200",
-    category: "technical",
-    tags: ["quantum", "encryption", "future tech"],
-    rating: 4.9,
-    comments: []
-  },
-  { 
-    id: 7, 
-    title: "Global Cybersecurity Skills Shortage Worsens", 
-    description: "A new report highlights the growing global shortage of cybersecurity professionals, with millions of positions remaining unfilled. Industry leaders call for increased education and training initiatives.", 
-    date: "2024-10-22",
-    sources: ["CyberWorkforceWatch", "TechEducationToday"],
-    image: "/placeholder.svg?height=100&width=200",
-    category: "general",
-    tags: ["skills shortage", "cybersecurity jobs", "education"],
-    rating: 4.3,
-    comments: []
-  },
-  { 
-    id: 8, 
-    title: "New AI Tool Detects Deepfake Videos with 99% Accuracy", 
-    description: "Researchers have developed an AI-powered tool capable of detecting deepfake videos with unprecedented accuracy. The technology could be crucial in combating misinformation and digital fraud.", 
-    date: "2024-10-21",
-    sources: ["AINewsDaily", "DeepfakeDetector"],
-    image: "/placeholder.svg?height=100&width=200",
-    category: "technical",
-    tags: ["AI", "deepfake", "misinformation"],
-    rating: 4.6,
-    comments: []
-  },
-  { 
-    id: 9, 
-    title: "Major Bank Faces Regulatory Action Over Data Breach", 
-    description: "A leading international bank is facing severe regulatory action and potential fines following a massive data breach that exposed millions of customers' personal and financial information.", 
-    date: "2024-10-20",
-    sources: ["FinanceSecurityWatch", "BankingNewsNetwork"],
-    image: "/placeholder.svg?height=100&width=200",
-    category: "finance",
-    tags: ["data breach", "banking", "regulatory action"],
-    rating: 4.4,
-    comments: []
-  },
-  { 
-    id: 10, 
-    title: "Open-Source Security Initiative Gains Momentum", 
-    description: "A collaborative open-source security initiative, aimed at improving the security of critical software dependencies, has gained significant traction with major tech companies pledging support and resources.", 
-    date: "2024-10-19",
-    sources: ["OpenSourceAdvocate", "TechCollaborationNews"],
-    image: "/placeholder.svg?height=100&width=200",
-    category: "technical",
-    tags: ["open-source", "software security", "collaboration"],
-    rating: 4.1,
-    comments: []
+const fetchArticles = async (category = 'all', searchTerm = '', page = 1) => {
+  try {
+    const response = await fetch(
+      `http://localhost:8010/articles?page=${page}&size=10${category !== 'all' ? `&tag=${category}` : ''}`
+    );
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    const data = await response.json();
+    return data.articles.map((article: any) => ({
+      ...article,
+      image: article.image || '/placeholder.svg?height=100&width=200'
+    }));
+  } catch (error) {
+    console.error("Failed to fetch articles:", error);
+    return [];
   }
-]
+};
 
 const categories = [
   { id: 'all', name: 'All' },
@@ -184,7 +78,7 @@ const aiResponses = [
 ]
 
 export default function CyberNewsDashboard() {
-  const [newsArticles, setNewsArticles] = useState<Article[]>(initialNewsArticles)
+  const [newsArticles, setNewsArticles] = useState<Article[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [savedArticles, setSavedArticles] = useState<Article[]>([])
   const [sortBy, setSortBy] = useState<'hot' | 'new' | 'top'>('hot')
@@ -211,7 +105,7 @@ export default function CyberNewsDashboard() {
   const filteredAndSortedArticles = useMemo(() => {
     let filtered = newsArticles.filter(article =>
       (article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      article.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        article.description.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (selectedCategories.includes('all') || selectedCategories.includes(article.category))
     )
 
@@ -256,8 +150,8 @@ export default function CyberNewsDashboard() {
   }
 
   const handleCategoryChange = (category: string) => {
-    setSelectedCategories(prev => 
-      category === 'all' ? ['all'] : prev.includes(category) 
+    setSelectedCategories(prev =>
+      category === 'all' ? ['all'] : prev.includes(category)
         ? prev.filter(c => c !== category && c !== 'all')
         : [...prev.filter(c => c !== 'all'), category]
     )
@@ -266,7 +160,7 @@ export default function CyberNewsDashboard() {
 
   const handleCreateArticle = () => {
     const similarityThreshold = 0.7 // Adjust this value to change sensitivity
-    const similar = newsArticles.filter(article => 
+    const similar = newsArticles.filter(article =>
       calculateSimilarity(article.title, newArticle.title) > similarityThreshold ||
       calculateSimilarity(article.description, newArticle.description) > similarityThreshold
     )
@@ -309,8 +203,8 @@ export default function CyberNewsDashboard() {
       description: `${originalArticle.description}\n\nAdditional info: ${similarArticle.description}`,
       tags: [...new Set([...originalArticle.tags, ...similarArticle.tags])]
     }
-    setNewsArticles(prev => prev.map(article => 
-      article.id === originalArticle.id ?   mergedArticle : article
+    setNewsArticles(prev => prev.map(article =>
+      article.id === originalArticle.id ? mergedArticle : article
     ))
     setIsCreateDialogOpen(false)
     setSimilarArticles([])
@@ -339,15 +233,17 @@ export default function CyberNewsDashboard() {
     setNotifications(prev => [...prev, `Language changed to ${lang.toUpperCase()}`])
   }
 
+  // Update the useEffect to fetch articles
   useEffect(() => {
-    // Simulating real-time notifications
-    const interval = setInterval(() => {
-      const randomArticle = newsArticles[Math.floor(Math.random() * newsArticles.length)]
-      setNotifications(prev => [...prev, `New update for "${randomArticle.title}"`])
-    }, 30000) // Every 30 seconds
+    const loadArticles = async () => {
+      const selectedCategory = selectedCategories.includes('all') ? '' : selectedCategories[0];
+      const articles = await fetchArticles(selectedCategory, searchTerm, currentPage);
+      setNewsArticles(articles);
+    };
 
-    return () => clearInterval(interval)
-  }, [newsArticles])
+    loadArticles();
+  }, [selectedCategories, searchTerm, currentPage]);
+
 
   return (
     <div className="flex flex-col min-h-screen bg-white text-black">
@@ -407,9 +303,9 @@ export default function CyberNewsDashboard() {
           <Tabs defaultValue="all">
             <TabsList>
               {categories.map((cat) => (
-                <TabsTrigger 
-                  key={cat.id} 
-                  value={cat.id} 
+                <TabsTrigger
+                  key={cat.id}
+                  value={cat.id}
                   onClick={() => handleCategoryChange(cat.id)}
                   className={cn(
                     "data-[state=active]:bg-black data-[state=active]:text-white",
@@ -444,7 +340,7 @@ export default function CyberNewsDashboard() {
                   <Input
                     id="title"
                     value={newArticle.title}
-                    onChange={(e) => setNewArticle({...newArticle, title: e.target.value})}
+                    onChange={(e) => setNewArticle({ ...newArticle, title: e.target.value })}
                     className="col-span-3"
                   />
                 </div>
@@ -455,7 +351,7 @@ export default function CyberNewsDashboard() {
                   <Textarea
                     id="description"
                     value={newArticle.description}
-                    onChange={(e) => setNewArticle({...newArticle, description: e.target.value})}
+                    onChange={(e) => setNewArticle({ ...newArticle, description: e.target.value })}
                     className="col-span-3"
                   />
                 </div>
@@ -466,7 +362,7 @@ export default function CyberNewsDashboard() {
                   <select
                     id="category"
                     value={newArticle.category}
-                    onChange={(e) => setNewArticle({...newArticle, category: e.target.value})}
+                    onChange={(e) => setNewArticle({ ...newArticle, category: e.target.value })}
                     className="col-span-3"
                   >
                     {categories.filter(cat => cat.id !== 'all').map((cat) => (
@@ -481,7 +377,7 @@ export default function CyberNewsDashboard() {
                   <Input
                     id="tags"
                     value={newArticle.tags.join(', ')}
-                    onChange={(e) => setNewArticle({...newArticle, tags: e.target.value.split(',').map(tag => tag.trim())})}
+                    onChange={(e) => setNewArticle({ ...newArticle, tags: e.target.value.split(',').map(tag => tag.trim()) })}
                     className="col-span-3"
                     placeholder="Enter tags separated by commas"
                   />
@@ -496,27 +392,27 @@ export default function CyberNewsDashboard() {
         <div className="flex justify-end mb-4">
           <Tabs defaultValue={sortBy} className="mb-6">
             <TabsList>
-              <TabsTrigger 
-                value="hot" 
-                onClick={() => setSortBy('hot')} 
+              <TabsTrigger
+                value="hot"
+                onClick={() => setSortBy('hot')}
                 className="data-[state=active]:bg-black data-[state=active]:text-white"
                 aria-label="Sort by hot topics"
               >
                 <Flame className="mr-2 h-4 w-4" />
                 Hot
               </TabsTrigger>
-              <TabsTrigger 
-                value="new" 
-                onClick={() => setSortBy('new')} 
+              <TabsTrigger
+                value="new"
+                onClick={() => setSortBy('new')}
                 className="data-[state=active]:bg-black data-[state=active]:text-white"
                 aria-label="Sort by newest"
               >
                 <Clock className="mr-2 h-4 w-4" />
                 New
               </TabsTrigger>
-              <TabsTrigger 
-                value="top" 
-                onClick={() => setSortBy('top')} 
+              <TabsTrigger
+                value="top"
+                onClick={() => setSortBy('top')}
                 className="data-[state=active]:bg-black data-[state=active]:text-white"
                 aria-label="Sort by top rated"
               >
@@ -581,17 +477,17 @@ export default function CyberNewsDashboard() {
                 </CardContent>
               </div>
               <CardFooter className="bg-gray-50 px-4 py-3 flex justify-between">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => handleSaveArticle(article)}
                   aria-label={`Save article: ${article.title}`}
                 >
                   <Bookmark className="mr-2 h-4 w-4" />
                   Save
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   aria-label={`Read more about: ${article.title}`}
                 >
@@ -624,7 +520,7 @@ export default function CyberNewsDashboard() {
       </main>
       <Popover open={isChatOpen} onOpenChange={setIsChatOpen}>
         <PopoverTrigger asChild>
-          <Button 
+          <Button
             className="fixed bottom-4 right-4 rounded-full w-12 h-12 p-0 bg-black text-white hover:bg-gray-800"
             onClick={() => setIsChatOpen(true)}
             aria-label="Open AI Assistant chat"
@@ -636,9 +532,9 @@ export default function CyberNewsDashboard() {
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-center p-3 bg-black text-white">
               <h2 className="text-lg font-semibold">AI Assistant</h2>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setIsChatOpen(false)}
                 aria-label="Close AI Assistant chat"
               >
@@ -656,15 +552,15 @@ export default function CyberNewsDashboard() {
             </ScrollArea>
             <div className="p-3 bg-gray-100">
               <div className="flex items-center">
-                <Textarea 
+                <Textarea
                   placeholder="Ask about cybersecurity..."
                   value={currentMessage}
                   onChange={(e) => setCurrentMessage(e.target.value)}
                   className="flex-1 resize-none"
                   aria-label="Type your message to the AI Assistant"
                 />
-                <Button 
-                  onClick={handleSendMessage} 
+                <Button
+                  onClick={handleSendMessage}
                   className="ml-2 bg-black text-white hover:bg-gray-800"
                   aria-label="Send message"
                 >
